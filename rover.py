@@ -6,6 +6,7 @@ https://www.hackster.io/peejster/rover-c42139
 
 import time
 import RPi.GPIO as GPIO     # GPIO is the handle to control pins
+from random import randint
 
 class motor(object):
 
@@ -25,12 +26,12 @@ class motor(object):
         print 'motor '+str(self.forward)+' closed'
 
     def move_forward(self):
-        print 'motor '+str(self.forward)+' forward'
+#        print 'motor '+str(self.forward)+' forward'
         GPIO.output(self.forward, 1)
         GPIO.output(self.backward, 0)
 
     def move_backward(self):
-        print 'motor '+str(self.forward)+' backward'
+#        print 'motor '+str(self.forward)+' backward'
         GPIO.output(self.forward, 0)
         GPIO.output(self.backward, 1)
 
@@ -39,11 +40,43 @@ class motor(object):
         GPIO.output(self.forward, 0)
         GPIO.output(self.backward, 0)
 
+class distance(object):
+
+    def __init__(self, trigger, echo):
+        self.trigger_gpio = trigger
+        GPIO.output(self.trigger_gpio, 0)
+
+        self.echo_gpio = echo
+        self.distance = 1000    # in cm
+      
+    def get_distance(self):
+        GPIO.output(self.trigger_gpio, 0)
+        time.sleep(0.1)
+        GPIO.output(self.trigger_gpio, 1)
+        time.sleep(0.00001)
+        GPIO.output(self.trigger_gpio, 0)
+
+        while (GPIO.input(self.echo_gpio) == 0):
+            pulse_start = time.time()
+            
+        while (GPIO.input(self.echo_gpio) == 1):
+            pulse_end = time.time()
+
+        pulse_duration = pulse_end - pulse_start
+
+        self.distance = pulse_duration * 17150
+        self.distance = round(self.distance, 2)
+
+        print 'distance = '+str(self.distance)+' in cm'
+        return self.distance
+
 
 ###############################################################
 # Main program
 ###############################################################
 if __name__ == '__main__':
+
+    TOO_CLOSE_IN_CM = 30    # stop and turn when this close to an object
 
     GPIO.setmode(GPIO.BCM)  # set GPIO to use BCM pin numbers
     GPIO.setwarnings(False) # warnings off
@@ -61,28 +94,51 @@ if __name__ == '__main__':
     right_motor = motor(right_motor_forward, right_motor_backward)
     left_motor = motor(left_motor_forward, left_motor_backward)
 
+    ultra1_trigger_gpio_pin = 23    # GPIO pin
+    ultra1_echo_gpio_pin = 24       # GPIO pin
+
+    GPIO.setup(ultra1_trigger_gpio_pin, GPIO.OUT)
+    GPIO.setup(ultra1_echo_gpio_pin, GPIO.IN)
+
+    distance_sensor = distance(ultra1_trigger_gpio_pin, ultra1_echo_gpio_pin)
+
     print('*********************')
-    print('      Test Code      ')
+    print('      Running        ')
     print('*********************')
 
-    # Main loop
-    while True:
+    try:
+        # Main loop
+        while True:
 
-        right_motor.move_forward()
-        time.sleep(3)
+            if (distance_sensor.get_distance() >= TOO_CLOSE_IN_CM):
 
-        right_motor.move_backward()
-        time.sleep(3)
+                right_motor.move_forward()
+                left_motor.move_forward()
+                time.sleep(0.1)
 
+            else:
+
+                right_motor.stop()
+                left_motor.stop()
+                time.sleep(1)
+                right_motor.move_backward()
+                left_motor.move_backward()
+                time.sleep(1)
+
+                if (randint(0,9) < 5):
+                    right_motor.move_forward()
+                    left_motor.move_backward()
+                    time.sleep(1)
+                else:
+                    right_motor.move_backward()
+                    left_motor.move_forward()
+                    time.sleep(1)
+                
+    except KeyboardInterrupt:
+        print 'Keyboard Interrupt!'
         right_motor.stop()
-        time.sleep(3)
-
-        left_motor.move_forward()
-        time.sleep(3)
-
-        left_motor.move_backward()
-        time.sleep(3)
-
         left_motor.stop()
-        time.sleep(3)
+        GPIO.cleanup()
+
+
 
