@@ -4,9 +4,9 @@ Created 3/22/16 by Greg Griffes based on the hackster.io rover pages at
 https://www.hackster.io/peejster/rover-c42139 
 """
 
-import time
+import time, os
 import RPi.GPIO as GPIO     # GPIO is the handle to control pins
-from random import randint
+from random import randint, choice
 
 class motor(object):
 
@@ -76,6 +76,10 @@ class distance(object):
 ###############################################################
 if __name__ == '__main__':
 
+    MP3_LOC = "/home/pi/Downloads/"
+    MP3_FILES_STOP = "hasta", "a13prob", "alright2", "do_not", "failure", "school", "iceburg", "seeingthis", "whatinthename"
+    MP3_FILES_GO = "bond_theme", "hatecomp", "letsgo", "nproblem", "whoohoo", "bbthm"
+
     TOO_CLOSE_IN_CM = 30    # stop and turn when this close to an object
 
     GPIO.setmode(GPIO.BCM)  # set GPIO to use BCM pin numbers
@@ -105,6 +109,7 @@ if __name__ == '__main__':
     print('*********************')
     print('      Running        ')
     print('*********************')
+    os.system('mpg123 -q '+MP3_LOC+'online.mp3 &')
 
     try:
         # Main loop
@@ -120,22 +125,32 @@ if __name__ == '__main__':
 
                 right_motor.stop()
                 left_motor.stop()
-                time.sleep(1)
+                MP3_FILE = MP3_LOC+choice(MP3_FILES_STOP)
+                os.system('mpg123 -q '+MP3_FILE+'.mp3 &')
+                time.sleep(2)
                 right_motor.move_backward()
                 left_motor.move_backward()
-                time.sleep(1)
+                time.sleep(0.5)
 
                 if (randint(0,9) < 5):
                     right_motor.move_forward()
                     left_motor.move_backward()
-                    time.sleep(1)
+                    time.sleep(0.5)
                 else:
                     right_motor.move_backward()
                     left_motor.move_forward()
-                    time.sleep(1)
+                    time.sleep(0.5)
                 
+                time.sleep(2)
+                MP3_FILE = MP3_LOC+choice(MP3_FILES_GO)
+                os.system('mpg123 -q '+MP3_FILE+'.mp3 &')
+
+
     except KeyboardInterrupt:
-        print 'Keyboard Interrupt!'
+        right_motor.stop()
+        left_motor.stop()
+
+    except:
         right_motor.stop()
         left_motor.stop()
         GPIO.cleanup()
