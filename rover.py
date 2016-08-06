@@ -31,7 +31,7 @@ class motor(object):
         GPIO.output(self.backward, 0)
 
     def move_backward(self):
-#        print 'motor '+str(self.forward)+' backward'
+        print 'motor '+str(self.forward)+' backward'
         GPIO.output(self.forward, 0)
         GPIO.output(self.backward, 1)
 
@@ -67,7 +67,7 @@ class distance(object):
         self.distance = pulse_duration * 17150
         self.distance = round(self.distance, 2)
 
-        print 'distance = '+str(self.distance)+' in cm'
+#        print 'distance = '+str(self.distance)+' in cm'
         return self.distance
 
 
@@ -77,29 +77,54 @@ class distance(object):
 if __name__ == '__main__':
 
     MP3_LOC = "/home/pi/Downloads/"
-    MP3_FILES_STOP = "hasta", "a13prob", "alright2", "do_not", "failure", "school", "iceburg", "seeingthis", "whatinthename"
-    MP3_FILES_GO = "bond_theme", "hatecomp", "letsgo", "nproblem", "whoohoo", "bbthm"
+    MP3_FILES_INIT = "online", "2010_hal-firs"
+    MP3_FILES_STOP = "hasta", "a13prob", "alright2", "do_not", "failure", "iceburg", \
+                     "seeingthis", "whatinthename", "2001_cantdo", "2001_open", "2001_worry", \
+                     "stay_where", "noescape"
+    MP3_FILES_GO = "bond_theme", "hatecomp", "letsgo", "nproblem", "whoohoo", "bbthm", \
+                   "2001_mission", "2010_operatio", "school", "judg_by", \
+                   "beepwhist1", "mp6", "mp12", "the-ritz", "planetvulcan"
 
-    TOO_CLOSE_IN_CM = 30    # stop and turn when this close to an object
+    TOO_CLOSE_IN_CM = 40    # stop and turn when this close to an object
 
     GPIO.setmode(GPIO.BCM)  # set GPIO to use BCM pin numbers
     GPIO.setwarnings(False) # warnings off
 
+# GPIO pin assignments
     right_motor_forward = 27    # GPIO pin
     right_motor_backward = 22    # GPIO pin
     left_motor_forward = 5    # GPIO pin
     left_motor_backward = 6    # GPIO pin
+    ultra1_trigger_gpio_pin = 23    # GPIO pin
+    ultra1_echo_gpio_pin = 24       # GPIO pin
+    LED_Right_Red = 4
+    LED_Right_Green = 17
+    LED_Right_Blue = 25
+    LED_Left_Red = 13
+    LED_Left_Green = 16
+    LED_Left_Blue = 26
 
     GPIO.setup(right_motor_forward, GPIO.OUT)
     GPIO.setup(right_motor_backward, GPIO.OUT)
     GPIO.setup(left_motor_forward, GPIO.OUT)
     GPIO.setup(left_motor_backward, GPIO.OUT)
 
+    GPIO.setup(LED_Right_Red, GPIO.OUT)
+    GPIO.setup(LED_Right_Green, GPIO.OUT)
+    GPIO.setup(LED_Right_Blue, GPIO.OUT)
+    GPIO.setup(LED_Left_Red, GPIO.OUT)
+    GPIO.setup(LED_Left_Green, GPIO.OUT)
+    GPIO.setup(LED_Left_Blue, GPIO.OUT)
+
+    GPIO.output(LED_Right_Red, 1)
+    GPIO.output(LED_Right_Green, 0)
+    GPIO.output(LED_Right_Blue, 1)
+    GPIO.output(LED_Left_Red, 1)
+    GPIO.output(LED_Left_Green, 0)
+    GPIO.output(LED_Left_Blue, 1)
+
     right_motor = motor(right_motor_forward, right_motor_backward)
     left_motor = motor(left_motor_forward, left_motor_backward)
-
-    ultra1_trigger_gpio_pin = 23    # GPIO pin
-    ultra1_echo_gpio_pin = 24       # GPIO pin
 
     GPIO.setup(ultra1_trigger_gpio_pin, GPIO.OUT)
     GPIO.setup(ultra1_echo_gpio_pin, GPIO.IN)
@@ -109,19 +134,48 @@ if __name__ == '__main__':
     print('*********************')
     print('      Running        ')
     print('*********************')
-    os.system('mpg123 -q '+MP3_LOC+'online.mp3 &')
+    MP3_FILE = MP3_LOC+choice(MP3_FILES_INIT)
+    os.system('mpg123 -q '+MP3_FILE+'.mp3 &')
 
     try:
         # Main loop
+        c = 1
         while True:
 
-            if (distance_sensor.get_distance() >= TOO_CLOSE_IN_CM):
+            dist = distance_sensor.get_distance()
+#            print "Distance from obstacle = "+str(dist)+"mm Limit = "+str(TOO_CLOSE_IN_CM)
+            if (dist >= TOO_CLOSE_IN_CM):
 
                 right_motor.move_forward()
                 left_motor.move_forward()
+
+                if (c == 1):
+                    GPIO.output(LED_Right_Red, 1)
+                    GPIO.output(LED_Right_Green, 1)
+                    GPIO.output(LED_Right_Blue, 0)
+                    GPIO.output(LED_Left_Red, 1)
+                    GPIO.output(LED_Left_Green, 1)
+                    GPIO.output(LED_Left_Blue, 0)
+                    c = 0
+                else:
+                    GPIO.output(LED_Right_Red, 0)
+                    GPIO.output(LED_Right_Green, 1)
+                    GPIO.output(LED_Right_Blue, 1)
+                    GPIO.output(LED_Left_Red, 0)
+                    GPIO.output(LED_Left_Green, 1)
+                    GPIO.output(LED_Left_Blue, 1)
+                    c = 1
+                    
                 time.sleep(0.1)
 
             else:
+
+                GPIO.output(LED_Right_Red, 1)
+                GPIO.output(LED_Right_Green, 0)
+                GPIO.output(LED_Right_Blue, 1)
+                GPIO.output(LED_Left_Red, 1)
+                GPIO.output(LED_Left_Green, 0)
+                GPIO.output(LED_Left_Blue, 1)
 
                 right_motor.stop()
                 left_motor.stop()
@@ -130,29 +184,46 @@ if __name__ == '__main__':
                 time.sleep(2)
                 right_motor.move_backward()
                 left_motor.move_backward()
-                time.sleep(0.5)
+                time.sleep(2)
 
                 if (randint(0,9) < 5):
                     right_motor.move_forward()
                     left_motor.move_backward()
-                    time.sleep(0.5)
+                    time.sleep(1)
                 else:
                     right_motor.move_backward()
                     left_motor.move_forward()
-                    time.sleep(0.5)
+                    time.sleep(1)
                 
-                time.sleep(2)
+                right_motor.stop()
+                left_motor.stop()
                 MP3_FILE = MP3_LOC+choice(MP3_FILES_GO)
                 os.system('mpg123 -q '+MP3_FILE+'.mp3 &')
+                time.sleep(2)
 
 
     except KeyboardInterrupt:
+        print "Keyboard Interrupt Exception; quitting"
         right_motor.stop()
         left_motor.stop()
+        GPIO.output(LED_Right_Red, 1)
+        GPIO.output(LED_Right_Green, 1)
+        GPIO.output(LED_Right_Blue, 1)
+        GPIO.output(LED_Left_Red, 1)
+        GPIO.output(LED_Left_Green, 1)
+        GPIO.output(LED_Left_Blue, 1)
 
-    except:
+
+    except Exception as open_error:
+        print "exception: "+str(open_error)
         right_motor.stop()
         left_motor.stop()
+        GPIO.output(LED_Right_Red, 1)
+        GPIO.output(LED_Right_Green, 1)
+        GPIO.output(LED_Right_Blue, 1)
+        GPIO.output(LED_Left_Red, 1)
+        GPIO.output(LED_Left_Green, 1)
+        GPIO.output(LED_Left_Blue, 1)
         GPIO.cleanup()
 
 
